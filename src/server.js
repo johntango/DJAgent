@@ -219,6 +219,25 @@ function shuffle(arr) {
   return copy;
 }
 
+function selectConsistentOrchestraTracks(candidates, expectedSize, usedTrackIds = new Set()) {
+  const available = candidates.filter((track) => track && !usedTrackIds.has(track.id));
+  if (!available.length) return [];
+
+  const byArtist = new Map();
+  for (const track of available) {
+    const artistKey = (track.artist || '').trim().toLowerCase() || '__unknown_artist__';
+    const tracks = byArtist.get(artistKey) || [];
+    tracks.push(track);
+    byArtist.set(artistKey, tracks);
+  }
+
+  const artistPools = shuffle([...byArtist.values()]).sort((a, b) => b.length - a.length);
+  const selectedPool = artistPools.find((pool) => pool.length >= expectedSize) || artistPools[0] || [];
+  const chosen = shuffle(selectedPool).slice(0, expectedSize);
+  chosen.forEach((track) => usedTrackIds.add(track.id));
+  return chosen;
+}
+
 function fallbackPlaylistPlan(library) {
   const grouped = groupByStyle(library);
   const pattern = [
@@ -232,9 +251,7 @@ function fallbackPlaylistPlan(library) {
 
   const used = new Set();
   const tandas = pattern.map((slot, idx) => {
-    const pool = shuffle(grouped[slot.type]).filter((track) => !used.has(track.id));
-    const chosen = pool.slice(0, slot.size);
-    chosen.forEach((track) => used.add(track.id));
+    const chosen = selectConsistentOrchestraTracks(grouped[slot.type], slot.size, used);
     return {
       id: `tanda-${idx + 1}`,
       type: slot.type,
@@ -288,7 +305,7 @@ async function createPlanWithAgent(library, userPrompt) {
     'Add one cortina id after each tanda (6 total).',
     'Do not repeat track IDs.',
     'Orchestras can repeat only if separated by at least two full tandas.',
-    'Prefer coherent orchestra/era feeling inside a tanda.',
+    'Each tanda must use a single orchestra only: once the first track orchestra is chosen, all tracks in that tanda must be by the same artist/orchestra.',
     userPrompt ? `User direction: ${userPrompt}` : ''
   ].filter(Boolean).join('\n');
 
@@ -342,31 +359,17 @@ function hydratePlan(plan, library) {
   const usedTrackIds = new Set();
 
   function fillMissingTracks(type, existingTracks, expectedSize) {
-    const uniqueTracks = [];
-    for (const track of existingTracks) {
-      if (!track || usedTrackIds.has(track.id)) continue;
-      uniqueTracks.push(track);
-      usedTrackIds.add(track.id);
-      if (uniqueTracks.length === expectedSize) return uniqueTracks;
-    }
+    const seedTracks = existingTracks.filter((track) => track && !usedTrackIds.has(track.id));
+    const seedArtist = seedTracks[0]?.artist;
+    const matchingSeedTracks = seedArtist
+      ? seedTracks.filter((track) => track.artist?.toLowerCase() === seedArtist.toLowerCase())
+      : seedTracks;
 
-    const stylePool = shuffle(grouped[type] || []);
-    for (const track of stylePool) {
-      if (usedTrackIds.has(track.id)) continue;
-      uniqueTracks.push(track);
-      usedTrackIds.add(track.id);
-      if (uniqueTracks.length === expectedSize) return uniqueTracks;
-    }
+    const stylePool = shuffle(grouped[type] || []).filter((track) => !usedTrackIds.has(track.id));
+    const backupPool = shuffle(grouped.tango || []).filter((track) => !usedTrackIds.has(track.id));
+    const candidatePool = [...matchingSeedTracks, ...stylePool, ...backupPool];
 
-    const backupPool = shuffle(grouped.tango || []);
-    for (const track of backupPool) {
-      if (usedTrackIds.has(track.id)) continue;
-      uniqueTracks.push(track);
-      usedTrackIds.add(track.id);
-      if (uniqueTracks.length === expectedSize) return uniqueTracks;
-    }
-
-    return uniqueTracks;
+    return selectConsistentOrchestraTracks(candidatePool, expectedSize, usedTrackIds);
   }
 
   const tandas = plan.tandas.map((tanda, idx) => ({
@@ -518,6 +521,18 @@ app.post('/api/playlists/:id/replace-track', async (req, res) => {
 
   const replacement = library.tracks.find((t) => t.id === replacementTrackId);
   if (!replacement) return res.status(400).json({ error: 'replacementTrackId not found in library' });
+
+  const tanda = playlist.tandas[tandaIndex];
+  if (!tanda || !Array.isArray(tanda.tracks) || !tanda.tracks[trackIndex]) {
+    return res.status(400).json({ error: 'Invalid tandaIndex or trackIndex' });
+  }
+
+  const orchestra = tanda.tracks.find((track, idx) => idx !== trackIndex && track?.artist)?.artist;
+  if (orchestra && replacement.artist?.toLowerCase() !== orchestra.toLowerCase()) {
+    return res.status(400).json({
+      error: `Replacement track must match tanda orchestra: ${orchestra}`
+    });
+  }
 
   playlist.tandas[tandaIndex].tracks[trackIndex] = replacement;
   const updated = normalizePlaylist(playlist);
