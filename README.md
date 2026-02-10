@@ -16,6 +16,8 @@ export OPENAI_API_KEY=your_key_here
 npm start
 ```
 
+The server also accepts `OPENAI_KEY` and `OPENAI_TOKEN` as fallback environment variable names.
+
 Open: `http://localhost:3000`
 
 ## Data Storage
@@ -28,3 +30,4 @@ Open: `http://localhost:3000`
 
 ## Notes
 - If OpenAI generation fails or API key is missing, the app falls back to deterministic random tanda selection.
+- `POST /api/playlists` can include `openaiApiKey` in the JSON body to override env-based key lookup for that request.
