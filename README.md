@@ -15,9 +15,7 @@ npm install
 npm start
 ```
 
-The server automatically reads `.env` in the repository root, so `OPENAI_API_KEY=...` in that file is picked up automatically. In Codespaces, secrets are also exposed through `process.env`.
-
-The server also accepts `OPENAI_KEY` and `OPENAI_TOKEN` as fallback environment variable names.
+The server loads environment variables with `require('dotenv').config()`, so `OPENAI_API_KEY=...` in a repository `.env` file is picked up automatically. In Codespaces, secrets are also exposed through `process.env`.
 
 Open: `http://localhost:3000`
 
@@ -31,4 +29,3 @@ Open: `http://localhost:3000`
 
 ## Notes
 - If OpenAI generation fails or API key is missing, the app falls back to deterministic random tanda selection.
-- `POST /api/playlists` can include `openaiApiKey` in the JSON body to override env-based key lookup for that request.
