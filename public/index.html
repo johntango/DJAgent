@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tango DJ Agent</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Tango DJ Agent</h1>
+    <p>Create dance-floor-ready tandas and cortinas.</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Library</h2>
+      <div class="row">
+        <input id="musicRoot" value="/users/johnwilliams/Music/MyMusic" />
+        <button id="scanLibrary">Scan Library</button>
+      </div>
+      <p id="libraryStatus"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Create Playlist</h2>
+      <input id="playlistName" placeholder="Playlist name" />
+      <textarea id="playlistPrompt" rows="3" placeholder="Mood and flow (optional)"></textarea>
+      <button id="createPlaylist">Create with Agent</button>
+      <select id="playlistSelect"></select>
+      <button id="loadPlaylist">Load</button>
+    </section>
+
+    <section class="panel" id="playlistPanel">
+      <h2>Playlist</h2>
+      <div id="playlistMeta"></div>
+      <div id="playlist"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Tanda Library</h2>
+      <button id="refreshTandaLibrary">Refresh</button>
+      <div id="savedTandas"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Player</h2>
+      <audio controls id="audioPlayer"></audio>
+      <p id="nowPlaying"></p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
