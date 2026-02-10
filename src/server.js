@@ -252,7 +252,10 @@ function fallbackPlaylistPlan(library) {
 function validatePlanShape(plan) {
   if (!plan || !Array.isArray(plan.tandas) || plan.tandas.length !== 6) return false;
   const pattern = ['tango', 'tango', 'vals', 'tango', 'tango', 'milonga'];
-  return plan.tandas.every((t, i) => t.type === pattern[i] && Array.isArray(t.trackIds));
+  const sizes = [4, 4, 3, 4, 4, 3];
+  return plan.tandas.every((t, i) => t.type === pattern[i]
+    && Array.isArray(t.trackIds)
+    && t.trackIds.length >= sizes[i]);
 }
 
 async function createPlanWithAgent(library, userPrompt) {
@@ -335,12 +338,46 @@ async function createPlanWithAgent(library, userPrompt) {
 function hydratePlan(plan, library) {
   const trackMap = new Map(library.tracks.map((track) => [track.id, track]));
   const patternSizes = [4, 4, 3, 4, 4, 3];
+  const grouped = groupByStyle(library);
+  const usedTrackIds = new Set();
+
+  function fillMissingTracks(type, existingTracks, expectedSize) {
+    const uniqueTracks = [];
+    for (const track of existingTracks) {
+      if (!track || usedTrackIds.has(track.id)) continue;
+      uniqueTracks.push(track);
+      usedTrackIds.add(track.id);
+      if (uniqueTracks.length === expectedSize) return uniqueTracks;
+    }
+
+    const stylePool = shuffle(grouped[type] || []);
+    for (const track of stylePool) {
+      if (usedTrackIds.has(track.id)) continue;
+      uniqueTracks.push(track);
+      usedTrackIds.add(track.id);
+      if (uniqueTracks.length === expectedSize) return uniqueTracks;
+    }
+
+    const backupPool = shuffle(grouped.tango || []);
+    for (const track of backupPool) {
+      if (usedTrackIds.has(track.id)) continue;
+      uniqueTracks.push(track);
+      usedTrackIds.add(track.id);
+      if (uniqueTracks.length === expectedSize) return uniqueTracks;
+    }
+
+    return uniqueTracks;
+  }
 
   const tandas = plan.tandas.map((tanda, idx) => ({
     id: `tanda-${idx + 1}`,
     type: tanda.type,
     reasoning: tanda.reasoning || 'AI selected this tanda for flow.',
-    tracks: (tanda.trackIds || []).map((id) => trackMap.get(id)).filter(Boolean).slice(0, patternSizes[idx])
+    tracks: fillMissingTracks(
+      tanda.type,
+      (tanda.trackIds || []).map((id) => trackMap.get(id)),
+      patternSizes[idx]
+    )
   }));
 
   const cortinas = (plan.cortinaTrackIds || []).map((id) => trackMap.get(id)).filter(Boolean).slice(0, 6);
