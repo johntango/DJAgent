@@ -77,7 +77,8 @@ const generationSchema = {
               type: 'array',
               items: { type: 'string' }
             }
-          }
+          },
+          additionalProperties: false
         }
       },
       cortinaTrackIds: {
