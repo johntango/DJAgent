@@ -9,6 +9,7 @@ const PORT = process.env.PORT || 3000;
 const MUSIC_ROOT = process.env.MUSIC_ROOT || '/users/johnwilliams/Music/MyMusic';
 const DATA_DIR = path.resolve(__dirname, '..', 'data');
 const LIBRARY_FILE = path.join(DATA_DIR, 'library', 'library.json');
+const CATALOG_FALLBACK_FILES = ['CatalogArt.json', 'catalog-Art.json'];
 const PLAYLISTS_DIR = path.join(DATA_DIR, 'playlists');
 const TANDA_LIBRARY_DIR = path.join(DATA_DIR, 'tanda-library');
 const ALLOWED_EXTENSIONS = new Set(['.mp3', '.flac', '.m4a', '.wav', '.ogg', '.aiff']);
@@ -59,8 +60,60 @@ async function ensureDataDirs() {
   try {
     await fs.access(LIBRARY_FILE);
   } catch {
-    await fs.writeFile(LIBRARY_FILE, JSON.stringify({ generatedAt: null, root: MUSIC_ROOT, tracks: [] }, null, 2));
+    const seededLibrary = await loadCatalogFallback();
+    await fs.writeFile(LIBRARY_FILE, JSON.stringify(seededLibrary, null, 2));
   }
+}
+
+function inferTrackStyle(tags = {}) {
+  const text = `${(tags.genre || []).join(' ')} ${tags.title || ''} ${tags.album || ''}`.toLowerCase();
+  if (text.includes('vals') || text.includes('waltz')) return 'vals';
+  if (text.includes('milonga')) return 'milonga';
+  if (text.includes('cortina')) return 'cortina';
+  return 'tango';
+}
+
+function mapCatalogTrack(entry = {}) {
+  const absPath = entry.file?.absPath;
+  if (!absPath) return null;
+
+  const tags = entry.tags || {};
+  return {
+    id: absPath,
+    sourcePath: absPath,
+    relativePath: absPath,
+    title: tags.title || path.basename(absPath),
+    artist: tags.artist || tags.albumartist || 'Unknown Artist',
+    album: tags.album || 'Unknown Album',
+    genre: Array.isArray(tags.genre) ? tags.genre.join(', ') : tags.genre || '',
+    year: tags.year || null,
+    duration: 0,
+    style: inferTrackStyle(tags),
+    artUrl: entry.artUrl || null
+  };
+}
+
+async function loadCatalogFallback() {
+  const repoRoot = path.resolve(__dirname, '..');
+
+  for (const fileName of CATALOG_FALLBACK_FILES) {
+    const fallbackPath = path.join(repoRoot, fileName);
+    const catalog = await readJson(fallbackPath, null);
+    if (!catalog?.tracks?.length) continue;
+
+    const tracks = catalog.tracks.map(mapCatalogTrack).filter(Boolean);
+    if (!tracks.length) continue;
+
+    return {
+      generatedAt: new Date().toISOString(),
+      root: MUSIC_ROOT,
+      source: fileName,
+      trackCount: tracks.length,
+      tracks
+    };
+  }
+
+  return { generatedAt: null, root: MUSIC_ROOT, tracks: [] };
 }
 
 async function readJson(filePath, fallback) {

@@ -23,5 +23,8 @@ Open: `http://localhost:3000`
 - Playlists: `data/playlists/*.json`
 - Saved tandas: `data/tanda-library/*.json`
 
+## Catalog fallback
+- On first start, if `data/library/library.json` does not exist, the server can seed the library from `CatalogArt.json` (or `catalog-Art.json`) when present in the repo root.
+
 ## Notes
 - If OpenAI generation fails or API key is missing, the app falls back to deterministic random tanda selection.
