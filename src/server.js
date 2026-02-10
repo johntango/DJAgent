@@ -27,7 +27,7 @@ const generationSchema = {
   name: 'tango_playlist_plan',
   schema: {
     type: 'object',
-    required: ['tandas'],
+    required: ['tandas', 'cortinaTrackIds'],
     properties: {
       tandas: {
         type: 'array',
