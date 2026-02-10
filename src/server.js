@@ -252,7 +252,14 @@ function validatePlanShape(plan) {
 
 async function createPlanWithAgent(library, userPrompt) {
   if (!openai) {
-    return null;
+    return {
+      plan: null,
+      debug: {
+        enabled: false,
+        reason: 'OPENAI_API_KEY is not set',
+        timestamp: new Date().toISOString()
+      }
+    };
   }
 
   const pattern = ['tango', 'tango', 'vals', 'tango', 'tango', 'milonga'];
@@ -276,6 +283,14 @@ async function createPlanWithAgent(library, userPrompt) {
     userPrompt ? `User direction: ${userPrompt}` : ''
   ].filter(Boolean).join('\n');
 
+  const startedAt = Date.now();
+  const requestPayload = {
+    pattern,
+    trackCount: conciseLibrary.length,
+    sampleTrackIds: conciseLibrary.slice(0, 5).map((track) => track.id),
+    userPrompt: userPrompt || ''
+  };
+
   const response = await openai.responses.create({
     model: 'gpt-4.1-mini',
     instructions,
@@ -291,7 +306,24 @@ async function createPlanWithAgent(library, userPrompt) {
   });
 
   const jsonText = response.output_text;
-  return JSON.parse(jsonText);
+  const plan = JSON.parse(jsonText);
+  const debug = {
+    enabled: true,
+    model: response.model,
+    responseId: response.id,
+    createdAt: new Date().toISOString(),
+    durationMs: Date.now() - startedAt,
+    request: requestPayload,
+    response: {
+      outputTextLength: jsonText.length,
+      tandaTypes: (plan.tandas || []).map((t) => t.type),
+      cortinaCount: (plan.cortinaTrackIds || []).length
+    }
+  };
+
+  console.log('[Agent Debug] OpenAI request/response', JSON.stringify(debug));
+
+  return { plan, debug };
 }
 
 function hydratePlan(plan, library) {
@@ -367,17 +399,35 @@ app.post('/api/playlists', async (req, res) => {
   const name = req.body?.name || `Milonga ${new Date().toLocaleDateString()}`;
 
   let plan = null;
+  let agentDebug = {
+    enabled: false,
+    createdAt: new Date().toISOString(),
+    reason: 'Agent was not called'
+  };
   try {
-    plan = await createPlanWithAgent(library, req.body?.prompt || '');
+    const agentResult = await createPlanWithAgent(library, req.body?.prompt || '');
+    plan = agentResult.plan;
+    agentDebug = agentResult.debug;
   } catch (error) {
     console.warn(`OpenAI generation failed: ${error.message}`);
+    agentDebug = {
+      enabled: false,
+      createdAt: new Date().toISOString(),
+      reason: `OpenAI generation failed: ${error.message}`
+    };
   }
 
-  const hydrated = plan && validatePlanShape(plan) ? hydratePlan(plan, library) : fallbackPlaylistPlan(library);
+  const usedFallback = !plan || !validatePlanShape(plan);
+  if (usedFallback && agentDebug?.enabled) {
+    agentDebug.validation = 'Agent response shape was invalid; fallback plan used';
+  }
+  const hydrated = usedFallback ? fallbackPlaylistPlan(library) : hydratePlan(plan, library);
   const playlist = normalizePlaylist({
     id,
     name,
     prompt: req.body?.prompt || '',
+    generationSource: usedFallback ? 'fallback' : 'agent',
+    agentDebug,
     createdAt: new Date().toISOString(),
     ...hydrated
   });
