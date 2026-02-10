@@ -49,7 +49,9 @@ app.use(express.static(path.resolve(__dirname, '..', 'public')));
 function resolveOpenAIApiKey(overrideApiKey = '') {
   const override = typeof overrideApiKey === 'string' ? overrideApiKey.trim() : '';
   if (override) return override;
-  return process.env.OPENAI_API_KEY || process.env.OPENAI_KEY || process.env.OPENAI_TOKEN || '';
+
+  const apiKey = process.env.OPENAI_API_KEY;
+  return apiKey || process.env.OPENAI_KEY || process.env.OPENAI_TOKEN || '';
 }
 
 function buildOpenAIClient(overrideApiKey = '') {
