@@ -12,9 +12,10 @@ Node/Express single-page app for Tango DJs.
 ## Setup
 ```bash
 npm install
-export OPENAI_API_KEY=your_key_here
 npm start
 ```
+
+The server automatically reads `.env` in the repository root, so `OPENAI_API_KEY=...` in that file is picked up automatically. In Codespaces, secrets are also exposed through `process.env`.
 
 The server also accepts `OPENAI_KEY` and `OPENAI_TOKEN` as fallback environment variable names.
 

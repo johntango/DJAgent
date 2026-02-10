@@ -1,8 +1,11 @@
 const express = require('express');
 const fs = require('fs/promises');
+const fsSync = require('fs');
 const path = require('path');
 const { parseFile } = require('music-metadata');
 const OpenAI = require('openai');
+
+loadLocalEnv();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,6 +16,32 @@ const CATALOG_FALLBACK_FILES = ['CatalogArt.json', 'catalog-Art.json'];
 const PLAYLISTS_DIR = path.join(DATA_DIR, 'playlists');
 const TANDA_LIBRARY_DIR = path.join(DATA_DIR, 'tanda-library');
 const ALLOWED_EXTENSIONS = new Set(['.mp3', '.flac', '.m4a', '.wav', '.ogg', '.aiff']);
+
+
+function loadLocalEnv() {
+  const envPath = path.resolve(__dirname, '..', '.env');
+
+  try {
+    const contents = fsSync.readFileSync(envPath, 'utf8');
+    for (const rawLine of contents.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith('#')) continue;
+      const separatorIndex = line.indexOf('=');
+      if (separatorIndex <= 0) continue;
+
+      const key = line.slice(0, separatorIndex).trim();
+      if (!key || process.env[key] !== undefined) continue;
+
+      let value = line.slice(separatorIndex + 1).trim();
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      process.env[key] = value;
+    }
+  } catch {
+    // Ignore missing or unreadable .env files.
+  }
+}
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.resolve(__dirname, '..', 'public')));
