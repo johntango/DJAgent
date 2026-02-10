@@ -17,7 +17,16 @@ const ALLOWED_EXTENSIONS = new Set(['.mp3', '.flac', '.m4a', '.wav', '.ogg', '.a
 app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.resolve(__dirname, '..', 'public')));
 
-const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+function resolveOpenAIApiKey(overrideApiKey = '') {
+  const override = typeof overrideApiKey === 'string' ? overrideApiKey.trim() : '';
+  if (override) return override;
+  return process.env.OPENAI_API_KEY || process.env.OPENAI_KEY || process.env.OPENAI_TOKEN || '';
+}
+
+function buildOpenAIClient(overrideApiKey = '') {
+  const apiKey = resolveOpenAIApiKey(overrideApiKey);
+  return apiKey ? new OpenAI({ apiKey }) : null;
+}
 
 const generationSchema = {
   name: 'tango_playlist_plan',
@@ -250,13 +259,14 @@ function validatePlanShape(plan) {
   return plan.tandas.every((t, i) => t.type === pattern[i] && Array.isArray(t.trackIds));
 }
 
-async function createPlanWithAgent(library, userPrompt) {
+async function createPlanWithAgent(library, userPrompt, overrideApiKey = '') {
+  const openai = buildOpenAIClient(overrideApiKey);
   if (!openai) {
     return {
       plan: null,
       debug: {
         enabled: false,
-        reason: 'OPENAI_API_KEY is not set',
+        reason: 'No OpenAI API key found (checked request override, OPENAI_API_KEY, OPENAI_KEY, OPENAI_TOKEN)',
         timestamp: new Date().toISOString()
       }
     };
@@ -405,7 +415,11 @@ app.post('/api/playlists', async (req, res) => {
     reason: 'Agent was not called'
   };
   try {
-    const agentResult = await createPlanWithAgent(library, req.body?.prompt || '');
+    const agentResult = await createPlanWithAgent(
+      library,
+      req.body?.prompt || '',
+      req.body?.openaiApiKey || ''
+    );
     plan = agentResult.plan;
     agentDebug = agentResult.debug;
   } catch (error) {
