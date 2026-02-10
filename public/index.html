@@ -13,33 +13,39 @@
   </header>
 
   <main>
-    <section class="panel player-panel">
-      <h2>Track Player</h2>
-      <audio controls id="audioPlayer"></audio>
-      <p id="nowPlaying">Now playing: (nothing selected)</p>
-    </section>
-
-    <section class="panel decision-panel">
-      <h2>Agent Decisioning</h2>
-      <div id="agentDecisioning"><small>Load or create a playlist to see why tandas and tracks were selected.</small></div>
-    </section>
-
-    <section class="panel">
-      <h2>Library</h2>
-      <div class="row">
-        <input id="musicRoot" value="/users/johnwilliams/Music/MyMusic" />
-        <button id="scanLibrary">Scan Library</button>
+    <section class="panel command-band">
+      <div class="command-group player-group">
+        <h2>Track Player</h2>
+        <audio controls id="audioPlayer"></audio>
+        <p id="nowPlaying">Now playing: (nothing selected)</p>
       </div>
-      <p id="libraryStatus"></p>
-    </section>
 
-    <section class="panel">
-      <h2>Create Playlist</h2>
-      <input id="playlistName" placeholder="Playlist name" />
-      <textarea id="playlistPrompt" rows="3" placeholder="Mood and flow (optional)"></textarea>
-      <button id="createPlaylist">Create with Agent</button>
-      <select id="playlistSelect"></select>
-      <button id="loadPlaylist">Load</button>
+      <div class="command-group">
+        <h2>Library</h2>
+        <div class="row">
+          <input id="musicRoot" value="/users/johnwilliams/Music/MyMusic" />
+          <button id="scanLibrary">Scan Library</button>
+        </div>
+        <p id="libraryStatus"></p>
+      </div>
+
+      <div class="command-group">
+        <h2>Create Playlist</h2>
+        <input id="playlistName" placeholder="Playlist name" />
+        <textarea id="playlistPrompt" rows="3" placeholder="Mood and flow (optional)"></textarea>
+        <button id="createPlaylist">Create with Agent</button>
+        <div class="row">
+          <select id="playlistSelect"></select>
+          <button id="loadPlaylist">Load</button>
+        </div>
+        <button id="openDecisioningModal">Agent prompts & responses</button>
+      </div>
+
+      <div class="command-group">
+        <h2>Tanda Library</h2>
+        <button id="refreshTandaLibrary">Refresh</button>
+        <div id="savedTandas"></div>
+      </div>
     </section>
 
     <section class="panel" id="playlistPanel">
@@ -47,13 +53,17 @@
       <div id="playlistMeta"></div>
       <div id="playlist"></div>
     </section>
-
-    <section class="panel">
-      <h2>Tanda Library</h2>
-      <button id="refreshTandaLibrary">Refresh</button>
-      <div id="savedTandas"></div>
-    </section>
   </main>
+
+  <div id="decisioningModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="decisioningTitle">
+    <div class="modal-content panel">
+      <div class="modal-header">
+        <h2 id="decisioningTitle">Agent prompts & responses</h2>
+        <button id="closeDecisioningModal" aria-label="Close">✕</button>
+      </div>
+      <div id="agentDecisioning"><small>Load or create a playlist to see why tandas and tracks were selected.</small></div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

@@ -208,6 +208,29 @@ async function loadTandaLibrary() {
   host.innerHTML = tandas.map((t) => `<div class="tanda"><strong>${t.name}</strong><br><small>${t.tanda.type} · ${t.tanda.tracks.length} tracks</small></div>`).join('') || '<small>No saved tandas yet.</small>';
 }
 
+
+const decisioningModal = el('decisioningModal');
+
+function closeDecisioningModal() {
+  decisioningModal.classList.add('hidden');
+}
+
+el('openDecisioningModal').addEventListener('click', () => {
+  decisioningModal.classList.remove('hidden');
+});
+
+el('closeDecisioningModal').addEventListener('click', closeDecisioningModal);
+
+decisioningModal.addEventListener('click', (event) => {
+  if (event.target === decisioningModal) closeDecisioningModal();
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !decisioningModal.classList.contains('hidden')) {
+    closeDecisioningModal();
+  }
+});
+
 el('scanLibrary').addEventListener('click', async () => {
   try {
     const root = el('musicRoot').value.trim();
