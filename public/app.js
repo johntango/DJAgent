@@ -57,7 +57,10 @@ function renderPlaylist() {
   container.innerHTML = '';
   meta.innerHTML = '';
 
-  if (!state.playlist) return;
+  if (!state.playlist) {
+    renderAgentDecisioning();
+    return;
+  }
 
   meta.innerHTML = `<strong>${state.playlist.name}</strong><br><small>${state.playlist.prompt || 'No custom prompt'}</small>`;
 
@@ -120,6 +123,37 @@ function renderPlaylist() {
     tandaDiv.append(cortinaDiv);
     container.append(tandaDiv);
   });
+
+  renderAgentDecisioning();
+}
+
+function renderAgentDecisioning() {
+  const host = el('agentDecisioning');
+  const playlist = state.playlist;
+
+  if (!playlist) {
+    host.innerHTML = '<small>Load or create a playlist to see why tandas and tracks were selected.</small>';
+    return;
+  }
+
+  const debug = playlist.agentDebug || {};
+  const decisionItems = (playlist.tandas || [])
+    .map((tanda, index) => `<li><strong>Tanda ${index + 1} (${tanda.type.toUpperCase()}):</strong> ${tanda.reasoning || 'No reasoning provided.'}</li>`)
+    .join('');
+
+  const modelInfo = debug.enabled
+    ? `${debug.model || 'Agent'}${debug.durationMs ? ` · ${debug.durationMs}ms` : ''}`
+    : 'Fallback planner';
+
+  host.innerHTML = `
+    <div class="decision-meta">
+      <div><strong>Selection source:</strong> ${playlist.generationSource || 'unknown'}</div>
+      <div><strong>Planner:</strong> ${modelInfo}</div>
+      <div><strong>Prompt guidance:</strong> ${playlist.prompt || 'No custom prompt'}</div>
+      <div><small>${debug.reason || debug.validation || 'Agent response was used to create this set.'}</small></div>
+    </div>
+    <ol class="decision-list">${decisionItems}</ol>
+  `;
 }
 
 async function moveTanda(fromIndex, toIndex) {

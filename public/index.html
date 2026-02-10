@@ -13,6 +13,17 @@
   </header>
 
   <main>
+    <section class="panel player-panel">
+      <h2>Track Player</h2>
+      <audio controls id="audioPlayer"></audio>
+      <p id="nowPlaying">Now playing: (nothing selected)</p>
+    </section>
+
+    <section class="panel decision-panel">
+      <h2>Agent Decisioning</h2>
+      <div id="agentDecisioning"><small>Load or create a playlist to see why tandas and tracks were selected.</small></div>
+    </section>
+
     <section class="panel">
       <h2>Library</h2>
       <div class="row">
@@ -41,12 +52,6 @@
       <h2>Tanda Library</h2>
       <button id="refreshTandaLibrary">Refresh</button>
       <div id="savedTandas"></div>
-    </section>
-
-    <section class="panel">
-      <h2>Player</h2>
-      <audio controls id="audioPlayer"></audio>
-      <p id="nowPlaying"></p>
     </section>
   </main>
 
